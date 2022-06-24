@@ -1,0 +1,3 @@
+import flappy
+
+flappy.main()
