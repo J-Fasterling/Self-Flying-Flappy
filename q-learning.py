@@ -1,6 +1,7 @@
-import flappy
+import flappy_headless
 import numpy as np 
 from collections import defaultdict
+import pickle
 
 #Params for Q-Function
 rewardFlying = 1
@@ -10,6 +11,7 @@ gamma = 0.9
 
 oldState = None
 oldAction = None
+gameCounter = 0
 
 #Q[0] -> no jump; Q[1] -> jump
 Q = defaultdict(lambda: [0, 0])
@@ -36,6 +38,9 @@ def paramsToDicName(params):
 def onGameOver(gameInfo):
     global oldState
     global oldAction
+    global gameCounter
+
+    print(str(gameCounter) + ': ' + str(gameInfo['score']))
 
     #Get index to be updated
     prevReward = Q[oldState]
@@ -55,6 +60,13 @@ def onGameOver(gameInfo):
 
     oldState = None
     oldAction = None
+
+    #Save Q-dictionary
+    if gameCounter % 10000 == 0:
+        with open("Q-Values/" + str(gameCounter) + ".pickle", "wb") as file:
+            pickle.dump(dict(Q), file)
+
+    gameCounter += 1
 
 
 def shouldEmulateKeyPress(params):
@@ -90,4 +102,4 @@ def shouldEmulateKeyPress(params):
         oldAction = True
         return True
 
-flappy.main(shouldEmulateKeyPress, onGameOver)
+flappy_headless.main(shouldEmulateKeyPress, onGameOver)
