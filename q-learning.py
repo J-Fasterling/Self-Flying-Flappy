@@ -12,6 +12,7 @@ gamma = 0.9
 oldState = None
 oldAction = None
 gameCounter = 0
+gameScores = []
 
 #Q[0] -> no jump; Q[1] -> jump
 Q = defaultdict(lambda: [0, 0])
@@ -39,8 +40,13 @@ def onGameOver(gameInfo):
     global oldState
     global oldAction
     global gameCounter
+    global gameScores
 
-    print(str(gameCounter) + ': ' + str(gameInfo['score']))
+    gameScores.append(gameInfo['score'])
+
+    if gameCounter % 100 == 0:
+        print(str(gameCounter) + ': ' + str(np.mean(gameScores[-100:])))
+    
 
     #Get index to be updated
     prevReward = Q[oldState]
