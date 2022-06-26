@@ -60,7 +60,7 @@ except NameError:
     xrange = range
 
 
-def main(shouldEmulateKeyPress):
+def main(shouldEmulateKeyPress, onGameOver):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -149,7 +149,8 @@ def main(shouldEmulateKeyPress):
             'playerIndexGen': playerIndex
         }
         crashInfo = mainGame(movementInfo, shouldEmulateKeyPress)
-        
+        onGameOver(crashInfo)
+
         #For instant restart
         #showGameOverScreen(crashInfo)
 
@@ -266,7 +267,15 @@ def mainGame(movementInfo, shouldEmulateKeyPress):
                     playerFlapped = True
                     SOUNDS['wing'].play()
 
-        if shouldEmulateKeyPress():
+        #params with every neccessary information
+        params = {
+            'playerVelY': playerVelY,
+            'playerY': playery,
+            'upperPipes': upperPipes,
+            'lowerPipes': lowerPipes
+        }
+
+        if shouldEmulateKeyPress(params):
             if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
