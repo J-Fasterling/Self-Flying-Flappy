@@ -1,4 +1,5 @@
 from itertools import cycle
+import numpy as np
 import random
 import sys
 
@@ -59,7 +60,7 @@ except NameError:
     xrange = range
 
 
-def main():
+def main(shouldEmulateKeyPress):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -138,9 +139,19 @@ def main():
     )
 
     while True:
-        movementInfo = showWelcomeAnimation()
-        crashInfo = mainGame(movementInfo)
-        showGameOverScreen(crashInfo)
+        #Skip welcome animation for instant start and select start position
+        #movementInfo = showWelcomeAnimation()
+        playery = int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)
+        playerIndex = cycle([0, 1, 2, 1])
+        movementInfo = {
+            'playery': random.randint(playery - 8, playery + 8),
+            'basex': -16,
+            'playerIndexGen': playerIndex
+        }
+        crashInfo = mainGame(movementInfo, shouldEmulateKeyPress)
+        
+        #For instant restart
+        #showGameOverScreen(crashInfo)
 
 
 def showWelcomeAnimation():
@@ -205,7 +216,7 @@ def showWelcomeAnimation():
         FPSCLOCK.tick(FPS)
 
 
-def mainGame(movementInfo):
+def mainGame(movementInfo, shouldEmulateKeyPress):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
     playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
@@ -251,6 +262,12 @@ def mainGame(movementInfo):
                 sys.exit()
             if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
                 if playery > -2 * IMAGES['player'][0].get_height():
+                    playerVelY = playerFlapAcc
+                    playerFlapped = True
+                    SOUNDS['wing'].play()
+
+        if shouldEmulateKeyPress():
+            if playery > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
                     SOUNDS['wing'].play()
