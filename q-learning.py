@@ -19,9 +19,18 @@ def paramsToDicName(params):
     playerVelY = params['playerVelY']
     playerY = round(params['playerY'] / 10) * 10
 
+    #check if Bot should focus on next pipe
+    if int(params['upperPipes'][0]['x']) < 56:
+        index = 1
+    else:
+        index = 0
+        
+    upperPipeX = round(int(params['upperPipes'][index]['x']) / 10) * 10
+    upperPipeY = round(int(params['upperPipes'][index]['y']) / 10) * 10
+
     return str(playerVelY) + '_' + str(playerY) + '_' + \
-        str(int(params['upperPipes'][0]['x'])) + '_' + str(int(params['upperPipes'][0]['y'])) + '_' + \
-        str(int(params['upperPipes'][1]['x'])) + '_' + str(int(params['upperPipes'][1]['y']))
+        str(upperPipeX) + '_' + str(upperPipeY)
+        
 
 
 def onGameOver(gameInfo):
