@@ -16,20 +16,41 @@ Q = defaultdict(lambda: [0, 0])
 
 #Get parameter as string 
 def paramsToDicName(params):
-    return str(params['playerVelY']) + '_' + str(params['playerY']) + '_' + \
+    playerVelY = params['playerVelY']
+    playerY = round(params['playerY'] / 10) * 10
+
+    return str(playerVelY) + '_' + str(playerY) + '_' + \
         str(int(params['upperPipes'][0]['x'])) + '_' + str(int(params['upperPipes'][0]['y'])) + '_' + \
         str(int(params['upperPipes'][1]['x'])) + '_' + str(int(params['upperPipes'][1]['y']))
 
 
 def onGameOver(gameInfo):
-    print(gameInfo)
+    global oldState
+    global oldAction
+
+    #Get index to be updated
+    prevReward = Q[oldState]
+    index = None
+    if oldAction == False:
+        index = 0
+    else:
+        index = 1
+
+    #Update old state with Q-function for non deterministic szenario
+    #estReward = 0 bc. of no further action
+    #Action was not successful
+    prevReward[index] = (1 - alpha) * prevReward[index] + \
+        alpha * rewardKill
+
+    Q[oldState] = prevReward
+
+    oldState = None
+    oldAction = None
 
 
 def shouldEmulateKeyPress(params):
     global oldState
     global oldAction
-
-    print(Q)
 
     #Get dict entry
     state = paramsToDicName(params)
@@ -44,6 +65,7 @@ def shouldEmulateKeyPress(params):
         index = 1
 
     #Update old state with Q-function for non deterministic szenario
+    #Action was successful
     prevReward[index] = (1 - alpha) * prevReward[index] + \
         alpha * (rewardFlying + gamma * max(estReward))
 
