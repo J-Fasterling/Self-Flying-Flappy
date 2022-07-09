@@ -31,4 +31,15 @@ How to train Self Flying Flappy
 ----------
 1. Install all dependencies 
 
-2. Run q-learning.py
+2. Adjust save_step parameter to desired step you want to save
+
+3. Run ./train_Flappy/q-learning.py
+
+How to use Self Flying Flappy
+----------
+1. Install all dependencies 
+
+2. Change name of .pickle file you want to use in ./Q-Values/ to Q.pickle
+
+3. Run ./use_Flappy/use_q-learning.py
+

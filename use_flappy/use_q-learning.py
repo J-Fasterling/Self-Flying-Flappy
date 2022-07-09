@@ -1,0 +1,115 @@
+from collections import defaultdict
+import flappy_with_Q
+import numpy as np 
+import pickle
+
+#Params for Q-Function
+rewardFlying = 1
+rewardKill = -10000
+alpha = 0.1
+gamma = 1
+
+#Param for Q-learning save
+save_step = 15000
+
+oldState = None
+oldAction = None
+gameCounter = 0
+gameScores = []
+
+#Q[0] -> no jump; Q[1] -> jump
+Q = None #defaultdict(lambda: [0, 0])
+
+with open("Q-Values/Q.pickle", "rb") as file:
+    Q = defaultdict(lambda: [0, 0], pickle.load(file))
+
+#Get parameter as string 
+def paramsToDicName(params):
+    playerVelY = params['playerVelY']
+    playerY = params['playerY']
+
+    #check if Bot should focus on next pipe
+    if int(params['upperPipes'][0]['x']) < 40:
+        index = 1
+    else:
+        index = 0
+        
+    upperPipeX = round(int(params['upperPipes'][index]['x']) / 5) * 5
+    upperPipeY = int(params['upperPipes'][index]['y'])
+
+    yDiff = round((playerY - upperPipeY) / 5) * 5
+
+    return str(playerVelY) + '_' + str(yDiff) + '_' + \
+        str(upperPipeX)
+        
+
+
+def onGameOver(gameInfo):
+    global oldState
+    global oldAction
+    global gameCounter
+    global gameScores
+    global save_step
+
+    gameScores.append(gameInfo['score'])
+
+    if gameCounter % 100 == 0:
+        print(str(gameCounter) + ': ' + str(np.mean(gameScores[-100:])))
+    
+
+    #Get index to be updated
+    prevReward = Q[oldState]
+    index = None
+    if oldAction == False:
+        index = 0
+    else:
+        index = 1
+
+    #Update old state with Q-function for non deterministic szenario
+    #estReward = 0 bc. of no further action
+    #Action was not successful
+    prevReward[index] = (1 - alpha) * prevReward[index] + \
+        alpha * rewardKill
+
+    Q[oldState] = prevReward
+
+    oldState = None
+    oldAction = None
+
+    gameCounter += 1
+
+
+def shouldEmulateKeyPress(params):
+    global oldState
+    global oldAction
+
+    #Get dict entry
+    state = paramsToDicName(params)
+    estReward = Q[state]
+
+    #Get index to be updated
+    prevReward = Q[oldState]
+    index = None
+    if oldAction == False:
+        index = 0
+    else:
+        index = 1
+
+    #Update old state with Q-function for non deterministic szenario
+    #Action was successful
+    prevReward[index] = (1 - alpha) * prevReward[index] + \
+        alpha * (rewardFlying + gamma * max(estReward))
+
+    Q[oldState] = prevReward
+
+    #Check if to jump or not to jump
+    oldState = state
+
+    if estReward[0] >= estReward[1]:
+        oldAction = False
+        return False
+    else:
+        oldAction = True
+        return True
+
+flappy_with_Q.main(shouldEmulateKeyPress, onGameOver)

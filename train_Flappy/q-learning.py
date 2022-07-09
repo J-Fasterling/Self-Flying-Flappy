@@ -1,5 +1,5 @@
 from collections import defaultdict
-import flappy_headless
+import flappy_headless 
 import numpy as np 
 import pickle
 
@@ -8,6 +8,9 @@ rewardFlying = 1
 rewardKill = -10000
 alpha = 0.1
 gamma = 1
+
+#Param for Q-learning save
+save_step = 15000
 
 oldState = None
 oldAction = None
@@ -23,7 +26,7 @@ def paramsToDicName(params):
     playerY = params['playerY']
 
     #check if Bot should focus on next pipe
-    if int(params['upperPipes'][0]['x']) < 56:
+    if int(params['upperPipes'][0]['x']) < 40:
         index = 1
     else:
         index = 0
@@ -43,6 +46,7 @@ def onGameOver(gameInfo):
     global oldAction
     global gameCounter
     global gameScores
+    global save_step
 
     gameScores.append(gameInfo['score'])
 
@@ -70,7 +74,7 @@ def onGameOver(gameInfo):
     oldAction = None
 
     #Save Q-dictionary
-    if gameCounter % 10000 == 0:
+    if gameCounter % save_step == 0:
         with open("Q-Values/" + str(gameCounter) + ".pickle", "wb") as file:
             pickle.dump(dict(Q), file)
 

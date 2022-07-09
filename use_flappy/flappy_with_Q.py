@@ -1,6 +1,7 @@
 from itertools import cycle
 import random
 import sys
+import numpy as np
 
 import pygame
 from pygame.locals import *
@@ -59,7 +60,7 @@ except NameError:
     xrange = range
 
 
-def main():
+def main(shouldEmulateKeyPress, onGameover):
     global SCREEN, FPSCLOCK
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -98,44 +99,53 @@ def main():
     SOUNDS['point']  = pygame.mixer.Sound('assets/audio/point' + soundExt)
     SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
     SOUNDS['wing']   = pygame.mixer.Sound('assets/audio/wing' + soundExt)
+    
+    # select random background sprites
+    randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
+    IMAGES['background'] = pygame.image.load(BACKGROUNDS_LIST[randBg]).convert()
+
+    # select random player sprites
+    randPlayer = random.randint(0, len(PLAYERS_LIST) - 1)
+    IMAGES['player'] = (
+        pygame.image.load(PLAYERS_LIST[randPlayer][0]).convert_alpha(),
+        pygame.image.load(PLAYERS_LIST[randPlayer][1]).convert_alpha(),
+        pygame.image.load(PLAYERS_LIST[randPlayer][2]).convert_alpha(),
+    )
+
+    # select random pipe sprites
+    pipeindex = random.randint(0, len(PIPES_LIST) - 1)
+    IMAGES['pipe'] = (
+        pygame.transform.rotate(
+            pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(), 180),
+        pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(),
+    )
+
+    # hismask for pipes
+    HITMASKS['pipe'] = (
+        getHitmask(IMAGES['pipe'][0]),
+        getHitmask(IMAGES['pipe'][1]),
+    )
+
+    # hitmask for player
+    HITMASKS['player'] = (
+        getHitmask(IMAGES['player'][0]),
+        getHitmask(IMAGES['player'][1]),
+        getHitmask(IMAGES['player'][2]),
+    )
 
     while True:
-        # select random background sprites
-        randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
-        IMAGES['background'] = pygame.image.load(BACKGROUNDS_LIST[randBg]).convert()
+        # movementInfo = showWelcomeAnimation()
+        playerY = int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)
+        movementInfo = {
+            'playerY': np.random.randint(playerY - 8, playerY + 8),
+            'basex': -16,
+            'playerIndexGen': cycle([0, 1, 2, 1])
+        }
+        # print(movementInfo)
+        crashInfo = mainGame(movementInfo, shouldEmulateKeyPress)
+        onGameover(crashInfo)
 
-        # select random player sprites
-        randPlayer = random.randint(0, len(PLAYERS_LIST) - 1)
-        IMAGES['player'] = (
-            pygame.image.load(PLAYERS_LIST[randPlayer][0]).convert_alpha(),
-            pygame.image.load(PLAYERS_LIST[randPlayer][1]).convert_alpha(),
-            pygame.image.load(PLAYERS_LIST[randPlayer][2]).convert_alpha(),
-        )
-
-        # select random pipe sprites
-        pipeindex = random.randint(0, len(PIPES_LIST) - 1)
-        IMAGES['pipe'] = (
-            pygame.transform.rotate(
-                pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(), 180),
-            pygame.image.load(PIPES_LIST[pipeindex]).convert_alpha(),
-        )
-
-        # hismask for pipes
-        HITMASKS['pipe'] = (
-            getHitmask(IMAGES['pipe'][0]),
-            getHitmask(IMAGES['pipe'][1]),
-        )
-
-        # hitmask for player
-        HITMASKS['player'] = (
-            getHitmask(IMAGES['player'][0]),
-            getHitmask(IMAGES['player'][1]),
-            getHitmask(IMAGES['player'][2]),
-        )
-
-        movementInfo = showWelcomeAnimation()
-        crashInfo = mainGame(movementInfo)
-        showGameOverScreen(crashInfo)
+        # showGameOverScreen(crashInfo)
 
 
 def showWelcomeAnimation():
@@ -146,8 +156,8 @@ def showWelcomeAnimation():
     # iterator used to change playerIndex after every 5th iteration
     loopIter = 0
 
-    playerx = int(SCREENWIDTH * 0.2)
-    playery = int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)
+    playerX = int(SCREENWIDTH * 0.2)
+    playerY = int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)
 
     messagex = int((SCREENWIDTH - IMAGES['message'].get_width()) / 2)
     messagey = int(SCREENHEIGHT * 0.12)
@@ -169,12 +179,12 @@ def showWelcomeAnimation():
                 # make first flap sound and return values for mainGame
                 SOUNDS['wing'].play()
                 return {
-                    'playery': playery + playerShmVals['val'],
+                    'playerY': playerY + playerShmVals['val'],
                     'basex': basex,
                     'playerIndexGen': playerIndexGen,
                 }
 
-        # adjust playery, playerIndex, basex
+        # adjust playerY, playerIndex, basex
         if (loopIter + 1) % 5 == 0:
             playerIndex = next(playerIndexGen)
         loopIter = (loopIter + 1) % 30
@@ -184,7 +194,7 @@ def showWelcomeAnimation():
         # draw sprites
         surface.blit(IMAGES['background'], (0,0))
         surface.blit(IMAGES['player'][playerIndex],
-                    (playerx, playery + playerShmVals['val']))
+                    (playerX, playerY + playerShmVals['val']))
         surface.blit(IMAGES['message'], (messagex, messagey))
         surface.blit(IMAGES['base'], (basex, BASEY))
 
@@ -196,10 +206,10 @@ def showWelcomeAnimation():
         FPSCLOCK.tick(FPS)
 
 
-def mainGame(movementInfo):
+def mainGame(movementInfo, shouldEmulateKeyPress):
     score = playerIndex = loopIter = 0
     playerIndexGen = movementInfo['playerIndexGen']
-    playerx, playery = int(SCREENWIDTH * 0.2), movementInfo['playery']
+    playerX, playerY = int(SCREENWIDTH * 0.2), movementInfo['playerY']
 
     basex = movementInfo['basex']
     baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
@@ -241,17 +251,30 @@ def mainGame(movementInfo):
                 pygame.quit()
                 sys.exit()
             if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                if playery > -2 * IMAGES['player'][0].get_height():
+                if playerY > -2 * IMAGES['player'][0].get_height():
                     playerVelY = playerFlapAcc
                     playerFlapped = True
                     SOUNDS['wing'].play()
 
+        params = {
+            'playerVelY': playerVelY,
+            'playerY': playerY,
+            'upperPipes': upperPipes,
+            'lowerPipes': lowerPipes
+        }
+        if shouldEmulateKeyPress(params):
+            if playerY > -2 * IMAGES['player'][0].get_height():
+                playerVelY = playerFlapAcc
+                playerFlapped = True
+                SOUNDS['wing'].play()
+
+
         # check for crash here
-        crashTest = checkCrash({'x': playerx, 'y': playery, 'index': playerIndex},
+        crashTest = checkCrash({'x': playerX, 'y': playerY, 'index': playerIndex},
                                upperPipes, lowerPipes)
         if crashTest[0]:
             return {
-                'y': playery,
+                'y': playerY,
                 'groundCrash': crashTest[1],
                 'basex': basex,
                 'upperPipes': upperPipes,
@@ -262,7 +285,7 @@ def mainGame(movementInfo):
             }
 
         # check for score
-        playerMidPos = playerx + IMAGES['player'][0].get_width() / 2
+        playerMidPos = playerX + IMAGES['player'][0].get_width() / 2
         for pipe in upperPipes:
             pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
@@ -289,7 +312,7 @@ def mainGame(movementInfo):
             playerRot = 45
 
         playerHeight = IMAGES['player'][playerIndex].get_height()
-        playery += min(playerVelY, BASEY - playery - playerHeight)
+        playerY += min(playerVelY, BASEY - playerY - playerHeight)
 
         # move pipes to left
         for uPipe, lPipe in zip(upperPipes, lowerPipes):
@@ -325,7 +348,7 @@ def mainGame(movementInfo):
             visibleRot = playerRot
         
         playerSurface = pygame.transform.rotate(IMAGES['player'][playerIndex], visibleRot)
-        surface.blit(playerSurface, (playerx, playery))
+        surface.blit(playerSurface, (playerX, playerY))
 
         surfaceScaled = pygame.transform.scale(surface, (int(SCREENWIDTH * SCALING), int(SCREENHEIGHT * SCALING)))
         SCREEN.blit(surfaceScaled, (0, 0))
@@ -337,8 +360,8 @@ def mainGame(movementInfo):
 def showGameOverScreen(crashInfo):
     """crashes the player down ans shows gameover image"""
     score = crashInfo['score']
-    playerx = SCREENWIDTH * 0.2
-    playery = crashInfo['y']
+    playerX = SCREENWIDTH * 0.2
+    playerY = crashInfo['y']
     playerHeight = IMAGES['player'][0].get_height()
     playerVelY = crashInfo['playerVelY']
     playerAccY = 2
@@ -362,12 +385,12 @@ def showGameOverScreen(crashInfo):
                 pygame.quit()
                 sys.exit()
             if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                if playery + playerHeight >= BASEY - 1:
+                if playerY + playerHeight >= BASEY - 1:
                     return
 
         # player y shift
-        if playery + playerHeight < BASEY - 1:
-            playery += min(playerVelY, BASEY - playery - playerHeight)
+        if playerY + playerHeight < BASEY - 1:
+            playerY += min(playerVelY, BASEY - playerY - playerHeight)
 
         # player velocity change
         if playerVelY < 15:
@@ -389,7 +412,7 @@ def showGameOverScreen(crashInfo):
         showScore(score, surface)
 
         playerSurface = pygame.transform.rotate(IMAGES['player'][1], playerRot)
-        surface.blit(playerSurface, (playerx,playery))
+        surface.blit(playerSurface, (playerX,playerY))
 
         surfaceScaled = pygame.transform.scale(surface, (int(SCREENWIDTH * SCALING), int(SCREENHEIGHT * SCALING)))
         SCREEN.blit(surfaceScaled, (0, 0))
@@ -499,4 +522,4 @@ def getHitmask(image):
     return mask
 
 if __name__ == '__main__':
-    main()
+    main(lambda x: 0, lambda x: 0)
