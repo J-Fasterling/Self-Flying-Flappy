@@ -1,9 +1,9 @@
-FlappyBirdClone
+FlappyBirdClone by [xiaomomo](https://github.com/xiaomomo/FlappyBirdClone)
 ===============
 
 A Flappy Bird Clone made using [python-pygame][1]
 
-How-to
+How to run basic FlappyBirdClone
 ------
 
 1. Install Python 2.7.X or 3.5.x from [here](https://www.python.org/download/releases/)
@@ -26,3 +26,9 @@ ScreenShot
 ![Flappy Bird](screenshot1.png)
 
 [1]: http://www.pygame.org
+
+How to train Self Flying Flappy
+----------
+1. Install all dependencies 
+
+2. Run q-learning.py
